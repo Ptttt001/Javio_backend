@@ -3,7 +3,7 @@ package com.example.demo.controller;
 import java.util.List;
 import java.util.Collections;
 import java.util.ArrayList;
-
+import java.util.Arrays;
 import java.time.LocalDateTime;
 import java.sql.Timestamp;
 import java.lang.Math;
@@ -46,7 +46,7 @@ public class StudentController {
     System.out.println(result);
       if (result.equals('['+pswd+']'))// 密碼正確
       {
-        queryString = "SELECT CID , ct FROM Coursev2 WHERE SID= :sid";//找出有修課的人SID
+        queryString = "SELECT CID , Ct FROM Coursev2 WHERE SID= :sid";//找出有修課的人SID
         query = entityManager.createNativeQuery(queryString);
         query.setParameter("sid", sid);
         List<Object[]> resultList2 = query.getResultList();// 獲取修課SID清單
@@ -70,6 +70,39 @@ public class StudentController {
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+// 教授登入:
+  // 入:帳號/密碼
+  // 回:成功|失敗/課程代碼
+  @GetMapping("prologin/{pid}/{pswd}")
+  public ResponseEntity<loginrspn> prologin(@PathVariable Integer pid, @PathVariable String pswd) {
+    String queryString = "SELECT  Ppwd FROM Professor WHERE PID= :pid";//找出有修課的人SID
+    Query query = entityManager.createNativeQuery(queryString);
+    query.setParameter("pid", pid);
+    String result = query.getResultList().toString();// 獲取修課SID清單
+    System.out.println(result);
+      if (result.equals('['+pswd+']'))// 密碼正確
+      {
+        queryString = "SELECT DISTINCT CID , ct FROM Coursev2 WHERE PID= :pid";
+        query = entityManager.createNativeQuery(queryString);
+        query.setParameter("pid", pid);
+        List<Object[]> resultList2 = query.getResultList();// 獲取修課SID清單
+        Integer[] dataArray = new Integer[resultList2.size()];
+        String[] dataArray2 = new String[resultList2.size()];
+        for (int i = 0; i < resultList2.size(); i++) {
+          Object[] row = resultList2.get(i);
+          Integer cid = (Integer) row[0];
+          String ct = (String) row[1];
+          dataArray[i] = cid;
+          dataArray2[i] = ct;
+      }
+      loginrspn loginrspn1 = new loginrspn(true, resultList2.size(), dataArray, dataArray2);
+      return ResponseEntity.ok(loginrspn1);      
+      } 
+      else//密碼錯誤
+      {
+        return ResponseEntity.notFound().build();
+      }
+    } 
   @GetMapping("/get")
   public String startNum() {
       return "更新成功";
@@ -90,10 +123,12 @@ public class StudentController {
     {
       correct[i] = (int) (Math.random() * 10) + 10 * i;
     }
+    Collections.shuffle(Arrays.asList(correct));//打亂正確數字
     String queryString = "SELECT SID FROM Coursev2 WHERE CID= :cid";//找出有修課的人SID
     Query query = entityManager.createNativeQuery(queryString);
     query.setParameter("cid", cid);
     List<Object[]> resultList = query.getResultList();// 獲取修課SID清單
+    System.out.println(resultList);
     for (Object Elements : resultList)//跑每一SID
     {
       queryString = "UPDATE Student SET ESCValue = :esc WHERE SID =:sid";//更新正確數值
@@ -257,7 +292,7 @@ public class StudentController {
   @Transactional
   public List<attstatusrspn> checknum(@PathVariable Integer cid) {
     try {
-      String queryString = "SELECT SName,Attendance.SID,Status FROM Attendance,Student WHERE Attendance.SID=Student.SID AND CID=:cid AND Time=(SELECT MAX(Time) FROM Attendance WHERE CID=1)";
+      String queryString = "SELECT SName,Attendance.SID,Status FROM Attendance,Student WHERE Attendance.SID=Student.SID AND CID=:cid AND Time=(SELECT MAX(Time) FROM Attendance WHERE CID=:cid)";
       Query query = entityManager.createNativeQuery(queryString);
       query.setParameter("cid", cid);
       List<Object[]> resultList = query.getResultList();
